@@ -1,0 +1,78 @@
+{
+  "name": "ses-notify",
+  "description": "SES Notify",
+  "version": "0.1.0",
+  "main": "src/notify.ts",
+  "license": "MIT",
+  "engines": {
+    "node": ">=8.9.0 <11.0.0",
+    "yarn": ">=1.12.3"
+  },
+  "dependencies": {
+    "assert": "^2.0.0",
+    "aws-lambda": "^0.1.2",
+    "aws-sdk": "^2.497.0",
+    "cross-env": "^5.2.0",
+    "dotenv": "^8.0.0",
+    "io-ts": "^1.10.4",
+    "mailparser": "^2.7.1",
+    "mime": "^2.4.3",
+    "node-fetch": "^2.3.7",
+    "ramda": "^0.26.1",
+    "source-map-support": "^0.5.12",
+    "uuid": "^3.3.2",
+    "winston": "^3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.26",
+    "@types/dotenv": "^6.1.1",
+    "@types/form-data": "^2.2.1",
+    "@types/mailparser": "^2.4.0",
+    "@types/mime": "^2.0.1",
+    "@types/mocha": "^5.2.6",
+    "@types/node": "^11.13.5",
+    "@types/node-fetch": "^2.3.3",
+    "@types/ramda": "^0.26.18",
+    "@types/sharp": "^0.22.2",
+    "form-data": "^2.3.3",
+    "husky": "^2.3.0",
+    "mocha": "^6.1.4",
+    "nodemon": "^1.19.1",
+    "prettier": "^1.18.2",
+    "pretty-quick": "^1.11.0",
+    "serverless": "^1.48.2",
+    "serverless-api-stage": "^1.4.0",
+    "serverless-plugin-existing-s3": "^2.4.0",
+    "serverless-plugin-typescript": "^1.1.7",
+    "shx": "^0.3.2",
+    "ts-node": "^8.3.0",
+    "tslint": "^5.16.0",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.5.3"
+  },
+  "scripts": {
+    "clean": "shx rm -Rf build node_modules",
+    "dev": "cross-env NODE_ENV=development nodemon -r ts-node/register src/index.ts",
+    "start": "cross-env NODE_ENV=production node ./build/index.js",
+    "build": "tsc -p .",
+    "format": "prettier \"src/**/*.{js,ts,tsx}\" --write",
+    "lint": "ts-node node_modules/.bin/tslint -p . -t verbose",
+    "test": "chamber exec ses-notify -- mocha",
+    "deploy": "chamber exec ses-notify -- serverless deploy && chamber exec ses-notify -- serverless s3deploy",
+    "serverless": "chamber exec ses-notify -- serverless",
+    "chamber": "chamber exec ses-notify --pristine -- sh -c set"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 100,
+    "parser": "typescript",
+    "singleQuote": true,
+    "trailingComma": "all"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged --pattern \"**/*.*(js|jsx|ts|tsx)\"",
+      "pre-push": "yarn lint && yarn run -s build && yarn test"
+    }
+  }
+}
