@@ -1,11 +1,12 @@
-import { apiResponse, findPayload } from './util'
+import { apiResponse, findPayload, urlToBucketName, urlToKeyName, toThrow } from './util'
 import { Context as LambdaContext, APIGatewayEvent, Callback as LambdaCallback } from 'aws-lambda'
 import { logger } from './logger'
 import fetch from 'node-fetch'
-import { urlToBucketName, urlToKeyName, toThrow } from './util'
 import { config } from './config'
 import { S3 } from 'aws-sdk'
-import { simpleParser } from 'mailparser'
+
+import { createMessage, findDestination } from './slack'
+import { parseMail } from './mime'
 
 const s3 = new S3({
   signatureVersion: 'v4',
@@ -20,58 +21,20 @@ export const processMailObject = (url: string) => {
     .promise()
     .then(data => {
       logger.info(`Got object ${url}, ${data.ContentLength} bytes`)
-      return simpleParser(<any>data.Body, {}) // force cast from undefined and Uint8Array
-        .then(mail => {
-          const blocks = [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*From:* ${mail.from && mail.from.text} \n*To:* ${mail.to &&
-                  mail.to.text} \n${mail.subject}\n`,
+      // force cast from undefined and Uint8Array
+      return parseMail(data.Body as any)
+        .then(notify => {
+          return createMessage(notify, { notice: `Source: ${url}` }).then(message => {
+            return fetch(findDestination(message), {
+              method: 'post',
+              headers: {
+                'Content-Type': 'application/json',
               },
-            },
-            {
-              type: 'divider',
-            },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: mail.text,
-              },
-            },
-            {
-              type: 'context',
-              elements: [
-                {
-                  type: 'mrkdwn',
-                  text: `Received: ${mail.date}`,
-                },
-              ],
-            },
-          ]
-
-          const text = `You have got mail: ${urlToBucketName(url)}, ${urlToKeyName(url)}, ${
-            data.ContentLength
-          } bytes, ${mail.subject}, ${mail.from && mail.from.text}, ${mail.to &&
-            mail.to.text}, ${mail.cc && mail.cc.text}, ${mail.bcc && mail.bcc.text}\n\n
-            --
-          ${mail.text}  
-          `
-
-          console.info('Sending blocks', blocks)
-          console.info('Sending plaintext', text)
-
-          return fetch(config.SLACK_DEFAULT_HOOK_URL, {
-            method: 'post',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              blocks,
-              text,
-            }),
+              body: JSON.stringify({
+                blocks: message.blocks,
+                text: message.text,
+              }),
+            })
           })
         })
         .catch(err => {
