@@ -17,7 +17,7 @@ provider:
   iamRoleStatements:
     - Effect: "Allow"
       Action:
-        - "s3:*"
+        - "s3:ListBucket"
       Resource:
         Fn::Join:
           - ""
@@ -25,12 +25,24 @@ provider:
             - ${env:MAIL_BUCKET, 'sample-bucket'}
     - Effect: "Allow"
       Action:
-        - "s3:*"
+        - "s3:GetObject"
+        - "s3:GetObjectAcl"
+        - "s3:PutObject"
+        - "s3:PutObjectAcl"
       Resource:
         Fn::Join:
           - ""
           - - "arn:aws:s3:::"
             - ${env:MAIL_BUCKET, 'sample-bucket'}
+            - "/*"
+    - Effect: "Allow"
+      Action:
+        - "ssm:GetParameter"
+      Resource:
+        Fn::Join:
+          - ""
+          - - "arn:aws:ssm:::"
+            - ${env:SSM_PATH, 'ses-notify'}
             - "/*"
 
 plugins:
