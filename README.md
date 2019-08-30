@@ -20,7 +20,7 @@ Listens to S3 bucket with MIME email message stored and sends notification to Sl
 
 - Receive message
 - Find sender, receiver, subject, text, etc
-- Build short and expanded message
+- Build structured and text message
 - Determine slack channel
 - Find hook for channel
 - Post message with buttons - (Short/Expand/Other channel)

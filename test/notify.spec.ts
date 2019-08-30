@@ -1,7 +1,7 @@
 import * as assert from 'assert'
 import { config } from '../src/config'
 import fetch from 'node-fetch'
-import { processMailObject } from '../src/notify'
+import { processMailObject, processNotify } from '../src/notify'
 import { parseMail } from '../src/mime'
 import * as fs from 'fs'
 import { createMessage } from '../src/slack'
@@ -85,5 +85,11 @@ describe('notify.ts', () => {
 
   e2e('can process sample file', () => {
     return processMailObject(config.TEST_E2E_OBJECT)
+  })
+
+  e2e('can process local sample file uptime robot', () => {
+    return parseMail(fs.readFileSync('test-data/5cktoahvk970k205fsrj3h7i17kbhl7bvmcgido1')).then(
+      processNotify('fs://test-data/1.msg'),
+    )
   })
 })

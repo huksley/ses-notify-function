@@ -47,7 +47,7 @@ export const config = toNumber(
   [],
 )
 
-export const readSSMConfig = (): any => {
+export const getCustomConfig = (): any => {
   if (config.SSM_PARAMETER_CONFIG) {
     const ssm = new SSM({
       region: config.AWS_REGION,

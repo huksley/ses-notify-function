@@ -6,12 +6,29 @@ import { config } from './config'
 import { S3 } from 'aws-sdk'
 
 import { createMessage, findDestination } from './slack'
-import { parseMail } from './mime'
+import { parseMail, Notification } from './mime'
 
 const s3 = new S3({
   signatureVersion: 'v4',
   region: config.AWS_REGION,
 })
+
+export const processNotify = (url: string) => (notify: Notification) => {
+  return createMessage(notify, { notice: `Source: ${url}` }).then(message => {
+    return findDestination(message).then(url =>
+      fetch(url, {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          blocks: message.blocks,
+          text: message.text,
+        }),
+      }),
+    )
+  })
+}
 
 export const processMailObject = (url: string) => {
   logger.info('Sending ' + url + ' to ' + config.SLACK_DEFAULT_HOOK_URL)
@@ -23,20 +40,7 @@ export const processMailObject = (url: string) => {
       logger.info(`Got object ${url}, ${data.ContentLength} bytes`)
       // force cast from undefined and Uint8Array
       return parseMail(data.Body as any)
-        .then(notify => {
-          return createMessage(notify, { notice: `Source: ${url}` }).then(message => {
-            return fetch(findDestination(message), {
-              method: 'post',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                blocks: message.blocks,
-                text: message.text,
-              }),
-            })
-          })
-        })
+        .then(processNotify(url))
         .catch(err => {
           logger.warn(`Failed to parse mail object: ${url}`, err)
           throw toThrow(err, `Failed to parse mail object: ${url}`)

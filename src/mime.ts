@@ -68,4 +68,6 @@ export const toNotification = (mail: ParsedMail): Notification => {
 }
 
 export const parseMail = (body: Buffer): Promise<Notification> =>
-  simpleParser(body, {}).then(toNotification)
+  simpleParser(body, {})
+    .then(toNotification)
+    .then(val => val)

@@ -1,16 +1,37 @@
 import * as uuid from 'uuid/v4'
-import { config } from './config'
+import { config, getCustomConfig } from './config'
 import { Notification } from './mime'
+import { logger } from './logger'
 
 export type Message = Notification & {
   uuid: string
   blocks: any
   text: string
-  channel: undefined
+  channel?: string
 }
 
-export const findDestination = (message: Message) => {
-  return message.channel === undefined ? config.SLACK_DEFAULT_HOOK_URL : '?'
+export const findDestination = (message: Message): Promise<string> => {
+  if (message.channel === undefined) {
+    return Promise.resolve(config.SLACK_DEFAULT_HOOK_URL)
+  } else {
+    return getCustomConfig().then(config => {
+      if (config && config.channels && config.channels[message.channel!]) {
+        return config.channels[message.channel!] as string
+      } else {
+        logger.warn('No hook url for channel ' + message.channel + ', using default')
+        return Promise.resolve(config.SLACK_DEFAULT_HOOK_URL)
+      }
+    })
+  }
+}
+
+export const findChannel = (message: Message) => {
+  if (message.from.indexOf('uptimerobot.com') >= 0) {
+    return 'uptime'
+  } else if (message.priority === 'direct') {
+    return 'direct'
+  }
+  return undefined
 }
 
 export const createMessage = (
@@ -71,8 +92,9 @@ export const createMessage = (
     uuid: uuid(),
     blocks,
     text,
-    channel: undefined,
-  }
+  } as Message
+
+  message.channel = findChannel(message)
 
   return Promise.resolve(message)
 }
