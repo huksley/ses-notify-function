@@ -10,7 +10,7 @@ export const defaultConfig = {
   SLACK_DEFAULT_HOOK_URL: 'https://hooks.slack.com/services/DEADBEEF/DEADBEEF/beefdeaddeadbeefdead',
   TEST_E2E: false,
   TEST_E2E_OBJECT: 's3://sample-bucket/sample-folder/deadbeefdeadbeefdeaddeadbeef',
-  SSM_PARAMETER_CONFIG: '',
+  SSM_PARAMETER_CONFIG: '/ses-notify/config',
 }
 
 type defaultConfigKey = keyof typeof defaultConfig

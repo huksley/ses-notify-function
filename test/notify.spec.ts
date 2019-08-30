@@ -1,7 +1,7 @@
 import * as assert from 'assert'
 import { config } from '../src/config'
 import fetch from 'node-fetch'
-import { processMailObject, processNotify } from '../src/notify'
+import { processMailObject, createS3UrlMarkup, processNotify } from '../src/notify'
 import { parseMail } from '../src/mime'
 import * as fs from 'fs'
 import { createMessage } from '../src/slack'
@@ -69,6 +69,10 @@ describe('notify.ts', () => {
     )
   })
 
+  it('can parse message notice url', () => {
+    console.info(createS3UrlMarkup('s3://xxx/xxxxx'))
+  })
+
   e2e('can send notification', () => {
     assert.doesNotThrow(() =>
       fetch(config.SLACK_DEFAULT_HOOK_URL, {
@@ -89,7 +93,7 @@ describe('notify.ts', () => {
 
   e2e('can process local sample file uptime robot', () => {
     return parseMail(fs.readFileSync('test-data/5cktoahvk970k205fsrj3h7i17kbhl7bvmcgido1')).then(
-      processNotify('fs://test-data/1.msg'),
+      processNotify('s3://sample-bucket/sample-key'),
     )
   })
 })
