@@ -14,9 +14,9 @@ export const findDestination = (message: Message): Promise<string> => {
   if (message.channel === undefined) {
     return Promise.resolve(config.SLACK_DEFAULT_HOOK_URL)
   } else {
-    return getCustomConfig().then(config => {
-      if (config && config.channels && config.channels[message.channel!]) {
-        return config.channels[message.channel!] as string
+    return getCustomConfig().then(props => {
+      if (config && props.channels && props.channels[message.channel!]) {
+        return props.channels[message.channel!] as string
       } else {
         logger.warn('No hook url for channel ' + message.channel + ', using default')
         return Promise.resolve(config.SLACK_DEFAULT_HOOK_URL)

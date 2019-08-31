@@ -30,9 +30,9 @@ export const createS3UrlMarkup = (url: string) => {
 
 export const processNotify = (url: string) => (notify: Notification) => {
   return createMessage(notify, { notice: `Source: ${createS3UrlMarkup(url)}` }).then(message => {
-    return findDestination(message).then(url => {
-      logger.info('Sending message ' + message.uuid + ' to ' + url)
-      return fetch(url, {
+    return findDestination(message).then(slackUrl => {
+      logger.info('Sending message ' + message.uuid + ' to ' + slackUrl)
+      return fetch(slackUrl, {
         method: 'post',
         headers: {
           'Content-Type': 'application/json',

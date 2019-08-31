@@ -1,7 +1,12 @@
 {
   "defaultSeverity": "error",
-  "extends": ["tslint:latest", "tslint-config-prettier"],
-  "rulesDirectory": ["./tslint"],
+  "extends": [
+    "tslint:latest",
+    "tslint-config-prettier"
+  ],
+  "rulesDirectory": [
+    "./tslint"
+  ],
   "linterOptions": {
     "format": "verbose"
   },
@@ -26,6 +31,7 @@
     "arrow-parens": false,
     "no-string-literal": false,
     "interface-name": false,
-    "no-winston-import": true
+    "no-winston-import": true,
+    "no-transitive-dependencies": true
   }
 }
