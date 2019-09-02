@@ -94,9 +94,11 @@ export const s3Handler = (
   try {
     const s3Event = payload as AWSLambda.S3Event
     Promise.all(
-      s3Event.Records.map(r =>
-        processMailObject('s3://' + r.s3.bucket.name + '/' + r.s3.object.key),
-      ),
+      s3Event.Records.map(r => {
+        if (r.eventName === 'ObjectCreated:Put') {
+          processMailObject('s3://' + r.s3.bucket.name + '/' + r.s3.object.key)
+        }
+      }),
     )
       .then(result => {
         logger.info(`Got result: ${JSON.stringify(result, null, 2)}`)

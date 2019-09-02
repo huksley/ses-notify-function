@@ -17,6 +17,14 @@ provider:
   iamRoleStatements:
     - Effect: "Allow"
       Action:
+        - "ssm:GetParameter"
+      Resource:
+        Fn::Join:
+          - ""
+          - - "arn:aws:ssm:::parameter"
+            - ${env:SSM_PARAMETER_CONFIG, '/ses-notify/config'}
+    - Effect: "Allow"
+      Action:
         - "s3:ListBucket"
       Resource:
         Fn::Join:
