@@ -42,6 +42,28 @@ export const processNotify = (url: string) => (notify: Notification) => {
           text: message.text,
         }),
       })
+        .then(response => {
+          if (response.status == 204) {
+            logger.info('Message sent ' + message.uuid + ': 204 OK')
+            return true
+          } else if (response.status == 200) {
+            return response.text().then(text => {
+              logger.info('Message sent (' + message.uuid + '): ' + text)
+              return true
+            })
+          } else {
+            return response.text().then(text => {
+              logger.info(
+                'Message sending failed (' + message.uuid + '): ' + response.status + ', ' + text,
+              )
+              return false
+            })
+          }
+        })
+        .catch(err => {
+          logger.warn('Failed to send message (' + message.uuid + '): ' + err.message, err)
+          return false
+        })
     })
   })
 }
@@ -93,15 +115,17 @@ export const s3Handler = (
   const payload = findPayload(event)
   try {
     const s3Event = payload as AWSLambda.S3Event
-    Promise.all(
+    return Promise.all(
       s3Event.Records.map(r => {
         if (r.eventName === 'ObjectCreated:Put') {
-          processMailObject('s3://' + r.s3.bucket.name + '/' + r.s3.object.key)
+          return processMailObject('s3://' + r.s3.bucket.name + '/' + r.s3.object.key)
+        } else {
+          return Promise.resolve(false)
         }
       }),
     )
       .then(result => {
-        logger.info(`Got result: ${JSON.stringify(result, null, 2)}`)
+        logger.info(`Got result: ${JSON.stringify(result)}`)
         apiResponse(event, context, callback).success(result)
       })
       .catch(err => {

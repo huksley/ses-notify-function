@@ -87,11 +87,13 @@ describe('notify.ts', () => {
     )
   })
 
-  e2e('can process sample file', () => {
+  e2e('can process sample file', function() {
+    this.timeout(20000)
     return processMailObject(config.TEST_E2E_OBJECT)
   })
 
-  e2e('can process local sample file uptime robot', () => {
+  e2e('can process local sample file uptime robot', function() {
+    this.timeout(20000)
     return parseMail(fs.readFileSync('test-data/5cktoahvk970k205fsrj3h7i17kbhl7bvmcgido1')).then(
       processNotify('s3://sample-bucket/sample-key'),
     )

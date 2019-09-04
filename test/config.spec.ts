@@ -9,7 +9,8 @@ describe('config.ts', () => {
   })
 
   const e2e = config.TEST_E2E ? it : it.skip
-  e2e('can read SSM config', () => {
+  e2e('can read SSM config', function() {
+    this.timeout(10000)
     return Promise.all([
       getCustomConfig().then(r => {
         console.info(r)
