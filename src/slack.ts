@@ -50,6 +50,14 @@ export const createMessage = (
       notice += `, ${key}: ${notify.meta![key]}`
     })
   }
+
+  let attachments = ''
+  if (notify.mail.attachments && notify.mail.attachments.length > 0) {
+    notify.mail.attachments.forEach(a => {
+      attachments += '\\n\n📎 ' + a.filename
+    })
+  }
+
   const blocks = [
     {
       type: 'section',
@@ -67,7 +75,7 @@ export const createMessage = (
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: mail.text,
+        text: (mail.text || 'No text found') + attachments,
       },
     },
     {
