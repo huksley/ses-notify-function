@@ -43,10 +43,10 @@ export const processNotify = (url: string) => (notify: Notification) => {
         }),
       })
         .then(response => {
-          if (response.status == 204) {
+          if (response.status === 204) {
             logger.info('Message sent ' + message.uuid + ': 204 OK')
             return true
-          } else if (response.status == 200) {
+          } else if (response.status === 200) {
             return response.text().then(text => {
               logger.info('Message sent (' + message.uuid + '): ' + text)
               return true

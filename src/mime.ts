@@ -46,6 +46,9 @@ export const toLinkedInNotification = (mail: ParsedMail): Notification => ({
       ? 'direct'
       : undefined,
   mail,
+  meta: {
+    template: mail.headers.get('x-linkedin-template'),
+  },
 })
 
 export const toGenericNotification = (mail: ParsedMail): Notification => ({
@@ -68,6 +71,4 @@ export const toNotification = (mail: ParsedMail): Notification => {
 }
 
 export const parseMail = (body: Buffer): Promise<Notification> =>
-  simpleParser(body, {})
-    .then(toNotification)
-    .then(val => val)
+  simpleParser(body, {}).then(toNotification)

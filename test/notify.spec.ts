@@ -5,6 +5,7 @@ import { processMailObject, createS3UrlMarkup, processNotify } from '../src/noti
 import { parseMail } from '../src/mime'
 import * as fs from 'fs'
 import { createMessage } from '../src/slack'
+import { logger } from '../src/logger'
 
 describe('notify.ts', () => {
   const e2e = config.TEST_E2E ? it : it.skip
@@ -44,7 +45,16 @@ describe('notify.ts', () => {
         assert.equal(notify.to, 'notify@app.ruslan.org')
         assert.equal('github', notify.type)
         return createMessage(notify).then(m => {
-          const meta = m.blocks[3].elements[0].text
+          let meta = ''
+          m.blocks.forEach(e => {
+            if (e.type === 'context' && e.elements) {
+              logger.info(e)
+              e.elements.forEach(ee => {
+                meta += ee.text
+              })
+            }
+          })
+
           assert.ok(
             meta.indexOf('reason: review_requested') >= 0,
             'Should contain reason: review_requested, ' + meta,
@@ -81,7 +91,7 @@ describe('notify.ts', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text2: 'Hello, world',
+          text: 'Hello, world',
         }),
       }),
     )
@@ -89,13 +99,20 @@ describe('notify.ts', () => {
 
   e2e('can process sample file', function() {
     this.timeout(20000)
-    return processMailObject(config.TEST_E2E_OBJECT)
+    return processMailObject(config.TEST_E2E_OBJECT).then(result => assert(result))
   })
 
   e2e('can process local sample file uptime robot', function() {
     this.timeout(20000)
-    return parseMail(fs.readFileSync('test-data/5cktoahvk970k205fsrj3h7i17kbhl7bvmcgido1')).then(
-      processNotify('s3://sample-bucket/sample-key'),
-    )
+    return parseMail(fs.readFileSync('test-data/5cktoahvk970k205fsrj3h7i17kbhl7bvmcgido1'))
+      .then(processNotify('s3://sample-bucket/sample-key'))
+      .then(result => assert(result))
+  })
+
+  e2e('no invalid_blocks response from slack', function() {
+    this.timeout(20000)
+    return parseMail(fs.readFileSync('test-data/lp7i8nenl6m9m6crjlbnnegghhmjptppuctqn581'))
+      .then(processNotify('s3://sample-bucket/sample-key'))
+      .then(result => assert(result))
   })
 })

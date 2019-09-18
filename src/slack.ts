@@ -58,6 +58,47 @@ export const createMessage = (
     })
   }
 
+  interface SlackBlock {
+    type: 'section'
+    text: {
+      type: 'mrkdwn'
+      text: string
+    }
+  }
+
+  const dynamicBlocks = [] as SlackBlock[]
+
+  if (!mail.text) {
+    dynamicBlocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: 'No text found',
+      },
+    })
+  } else {
+    // Split because of 3000 character limit for slack block content
+    mail.text.split('\n\n').map(s =>
+      dynamicBlocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: s,
+        },
+      }),
+    )
+  }
+
+  if (attachments !== '') {
+    dynamicBlocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: attachments,
+      },
+    })
+  }
+
   const blocks = [
     {
       type: 'section',
@@ -71,13 +112,7 @@ export const createMessage = (
     {
       type: 'divider',
     },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: (mail.text || 'No text found') + attachments,
-      },
-    },
+    ...dynamicBlocks,
     {
       type: 'context',
       elements: [
@@ -102,7 +137,7 @@ export const createMessage = (
     text,
   } as Message
 
+  // console.info(JSON.stringify(blocks, null, 2))
   message.channel = findChannel(message)
-
   return Promise.resolve(message)
 }
