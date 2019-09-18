@@ -21,7 +21,7 @@ provider:
       Resource:
         Fn::Join:
           - ""
-          - - "arn:aws:ssm:::parameter"
+          - - "arn:aws:ssm:::parameter/"
             - ${env:SSM_PARAMETER_CONFIG, '/ses-notify/config'}
     - Effect: "Allow"
       Action:
