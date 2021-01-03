@@ -26,7 +26,7 @@ export const findDestination = (message: Message): Promise<string> => {
 }
 
 export const findChannel = (message: Message) => {
-  if (message.from.indexOf('uptimerobot.com') >= 0) {
+  if (message.from && message.from.indexOf('uptimerobot.com') >= 0) {
     return 'uptime'
   } else if (message.priority === 'direct') {
     return 'direct'

@@ -3,8 +3,8 @@ import { simpleParser, ParsedMail } from 'mailparser'
 export type NotificationType = 'github' | 'linkedin' | undefined
 
 export interface Notification {
-  from: string
-  to: string
+  from?: string
+  to?: string
   type: NotificationType
   priority: 'direct' | 'project' | undefined
   mail: ParsedMail
@@ -25,8 +25,8 @@ export const notificationType = (mail: ParsedMail): NotificationType => {
 
 export const toGithubNotification = (mail: ParsedMail): Notification => ({
   type: 'github',
-  from: mail.from.value[0].address,
-  to: mail.cc ? mail.cc!.value[0].address : mail.to.value[0].address,
+  from: mail.from?.value[0].address,
+  to: mail.cc ? mail.cc?.value[0].address : mail.to?.value[0].address,
   priority:
     mail.headers.get('x-github-verify') || mail.headers.get('x-github-reason') === 'manual'
       ? 'direct'
@@ -39,8 +39,8 @@ export const toGithubNotification = (mail: ParsedMail): Notification => ({
 
 export const toLinkedInNotification = (mail: ParsedMail): Notification => ({
   type: 'linkedin',
-  from: mail.from.value[0].address,
-  to: mail.to.value[0].address,
+  from: mail.from?.value[0].address,
+  to: mail.to?.value[0].address,
   priority:
     mail.headers.get('x-linkedin-template') === 'email_type_messaging_digest'
       ? 'direct'
@@ -53,8 +53,8 @@ export const toLinkedInNotification = (mail: ParsedMail): Notification => ({
 
 export const toGenericNotification = (mail: ParsedMail): Notification => ({
   type: undefined,
-  from: mail.from.value[0].address,
-  to: mail.to.value[0].address,
+  from: mail.from?.value[0].address,
+  to: mail.to?.value[0].address,
   priority: undefined,
   mail,
 })
