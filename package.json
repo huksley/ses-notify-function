@@ -5,8 +5,7 @@
   "main": "src/notify.ts",
   "license": "MIT",
   "engines": {
-    "node": ">=8.9.0 <11.0.0",
-    "yarn": ">=1.12.3"
+    "node": ">=12 <13.0.0"
   },
   "dependencies": {
     "assert": "^2.0.0",
@@ -73,7 +72,7 @@
   "husky": {
     "hooks": {
       "pre-commit": "pretty-quick --staged --pattern \"**/*.*(js|jsx|ts|tsx)\"",
-      "pre-push": "yarn lint && yarn run -s build && yarn test"
+      "pre-push": "npm run lint && npm run build && npm run test"
     }
   }
 }
