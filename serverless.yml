@@ -7,6 +7,7 @@ provider:
   stage: dev
   # optional, in MB, default is 1024, min is 128
   memorySize: 128
+  logRetentionInDays: 30
   # optional, in seconds, default is 6
   timeout: 30
   # optional, default is true
