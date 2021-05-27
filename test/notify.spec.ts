@@ -10,6 +10,17 @@ import { logger } from '../src/logger'
 describe('notify.ts', () => {
   const e2e = config.TEST_E2E ? it : it.skip
 
+  it('can parse test sus file', () => {
+    return parseMail(fs.readFileSync('test-data/viechvd8rvlb22n49nqtrsrql95g0ahpqu6hq8o1')).then(
+      notify => {
+        return createMessage(notify).then(m => {
+          logger.info(m)
+          return m
+        })
+      },
+    )
+  })
+
   it('can parse test verify file', () => {
     return parseMail(fs.readFileSync('test-data/pu764f35kqfv61gs7m77eger4b1p7dp7gamjq0o1')).then(
       notify => {

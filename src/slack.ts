@@ -61,7 +61,7 @@ export const createMessage = (
   interface SlackBlock {
     type: 'section'
     text: {
-      type: 'mrkdwn'
+      type: 'mrkdwn' | 'plain_text'
       text: string
     }
   }
@@ -82,7 +82,7 @@ export const createMessage = (
       dynamicBlocks.push({
         type: 'section',
         text: {
-          type: 'mrkdwn',
+          type: 'plain_text',
           text: s,
         },
       }),
