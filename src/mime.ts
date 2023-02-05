@@ -34,6 +34,8 @@ export const toGithubNotification = (mail: ParsedMail): Notification => ({
   mail,
   meta: {
     reason: mail.headers.get('x-github-reason'),
+    messageId: mail.headers.get('message-id'),
+    subject: mail.subject,
   },
 })
 
@@ -48,6 +50,8 @@ export const toLinkedInNotification = (mail: ParsedMail): Notification => ({
   mail,
   meta: {
     template: mail.headers.get('x-linkedin-template'),
+    messageId: mail.headers.get('message-id'),
+    subject: mail.subject,
   },
 })
 
@@ -57,6 +61,10 @@ export const toGenericNotification = (mail: ParsedMail): Notification => ({
   to: mail.to?.value[0].address,
   priority: undefined,
   mail,
+  meta: {
+    messageId: mail.headers.get('message-id'),
+    subject: mail.subject,
+  },
 })
 
 export const toNotification = (mail: ParsedMail): Notification => {

@@ -18,14 +18,6 @@ provider:
   iamRoleStatements:
     - Effect: "Allow"
       Action:
-        - "ssm:GetParameter"
-      Resource:
-        Fn::Join:
-          - ""
-          - - "arn:aws:ssm:::parameter/"
-            - ${env:SSM_PARAMETER_CONFIG, '/ses-notify/config'}
-    - Effect: "Allow"
-      Action:
         - "s3:ListBucket"
       Resource:
         Fn::Join:
@@ -38,6 +30,7 @@ provider:
         - "s3:GetObjectAcl"
         - "s3:PutObject"
         - "s3:PutObjectAcl"
+        - "s3:CopyObject"
       Resource:
         Fn::Join:
           - ""
@@ -45,14 +38,12 @@ provider:
             - ${env:MAIL_BUCKET, 'sample-bucket'}
             - "/*"
     - Effect: "Allow"
-      Action:
-        - "ssm:GetParameter"
+      Action: 
+        - "ses:SendEmail"
+        - "ses:SendRawEmail"
       Resource:
-        Fn::Join:
-          - ""
-          - - "arn:aws:ssm:::"
-            - ${env:SSM_PATH, 'ses-notify'}
-            - "/*"
+        - "arn:aws:ses:*:340745406074:identity/*"
+        - "arn:aws:ses:*:340745406074:configuration-set/*"
 
 plugins:
   - serverless-plugin-typescript

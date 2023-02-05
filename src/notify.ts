@@ -3,7 +3,9 @@ import { Context as LambdaContext, APIGatewayEvent, Callback as LambdaCallback }
 import { logger } from './logger'
 import fetch from 'node-fetch'
 import { config } from './config'
-import { S3 } from 'aws-sdk'
+import { S3, SES } from 'aws-sdk'
+import * as aws from 'aws-sdk'
+import { createTransport } from 'nodemailer'
 
 import { createMessage, findDestination } from './slack'
 import { parseMail, Notification } from './mime'
@@ -28,7 +30,36 @@ export const createS3UrlMarkup = (url: string) => {
   )
 }
 
-export const processNotify = (url: string) => (notify: Notification) => {
+const ses = new SES({
+  apiVersion: '2010-12-01',
+  region: 'eu-west-1',
+})
+
+const send = createTransport({
+  SES: { ses, aws },
+  sendingRate: 1,
+})
+
+export const processNotify = (url: string) => async (notify: Notification) => {
+  const mail = {
+    from: notify.to,
+    to: notify.from,
+    subject: notify.meta?.subject?.startsWith("Re:") ? notify.meta?.subject : ('Re: ' + (notify.meta?.subject || '')),
+    html: "<div><p>Hi, I've received your message. Thank you!</p><p>On " + notify.mail.date?.toISOString() + " you wrote:\r\n" + 
+      notify.mail.html + 
+    "</p></div>",
+    headers: {
+      ...(typeof notify.meta?.messageId == 'string'
+        ? { 'In-Reply-To': notify.meta?.messageId }
+        : {}),
+    },
+  }
+
+  if (notify.from !== "hello@valosan.com") {
+    logger.info('Sending email from', mail.from, 'to', mail.to, 'subject', mail.subject)
+    await send.sendMail(mail);
+  }
+
   return createMessage(notify, { notice: `Source: ${createS3UrlMarkup(url)}` }).then(message => {
     return findDestination(message).then(slackUrl => {
       logger.info('Sending message ' + message.uuid + ' to ' + slackUrl)
