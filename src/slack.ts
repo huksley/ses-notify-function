@@ -1,48 +1,88 @@
 import * as uuid from 'uuid/v4'
-import { config, getCustomConfig } from './config'
+import { config } from './config'
 import { Notification } from './mime'
 import { logger } from './logger'
+import { urlToBucketName, urlToKeyName } from './util'
+import { createS3UrlMarkup } from './notify'
+
+interface SlackElement {
+  type: 'mrkdwn' | 'plain_text' | 'image'
+  text?: string
+  image_url?: string
+  alt_text?: string
+}
+
+interface SlackBlock {
+  type: 'section' | 'divider' | 'context' | 'header'
+  text?: SlackElement
+  elements?: SlackElement[]
+  accessory?: {
+    type: 'button' | 'image'
+    text?: {
+      type: 'plain_text'
+      text: string
+    }
+    value?: string
+    url?: string
+    action_id?: 'button-action'
+    image_url?: string
+    alt_text?: string
+  }
+}
 
 export type Message = Notification & {
   uuid: string
-  blocks: any
+  blocks?: SlackBlock[]
   text: string
-  channel?: string
 }
 
-export const findDestination = (message: Message): Promise<string> => {
-  if (message.channel === undefined) {
-    return Promise.resolve(config.SLACK_DEFAULT_HOOK_URL)
-  } else {
-    return getCustomConfig().then(props => {
-      if (config && props.channels && props.channels[message.channel!]) {
-        return props.channels[message.channel!] as string
-      } else {
-        logger.warn('No hook url for channel ' + message.channel + ', using default')
-        return Promise.resolve(config.SLACK_DEFAULT_HOOK_URL)
-      }
-    })
-  }
-}
+export const findDestination = async (message: Message): Promise<string> => {
+  const bucket = urlToBucketName(message.url)
+  const prefix = urlToKeyName(message.url).split('/')[0]
+  console.info('Finding destination for', message.url, 'bucket', bucket, 'prefix', prefix)
 
-export const findChannel = (message: Message) => {
-  if (message.from && message.from.indexOf('uptimerobot.com') >= 0) {
-    return 'uptime'
-  } else if (message.priority === 'direct') {
-    return 'direct'
+  for (let i = 1; i < 10; i++) {
+    const hook = config[i === 1 ? 'SLACK_HOOK_URL' : 'SLACK_HOOK_URL_' + i]
+    const match_bucket = config[i === 1 ? 'MAIL_BUCKET' : 'MAIL_BUCKET_' + i]
+    const match_prefix = config[i === 1 ? 'MAIL_PREFIX' : 'MAIL_PREFIX_' + i]
+    if (
+      hook &&
+      match_bucket &&
+      match_prefix &&
+      match_bucket === bucket &&
+      match_prefix === prefix
+    ) {
+      logger.info('Matching hook found', hook, 'for', message.url)
+      return hook
+    } else {
+      logger.info(
+        'No match for',
+        message.url,
+        'bucket',
+        bucket,
+        'prefix',
+        prefix,
+        'hook',
+        hook,
+        'match_bucket',
+        match_bucket,
+        'match_prefix',
+        match_prefix,
+      )
+    }
   }
-  return undefined
+
+  return config.SLACK_HOOK_URL
 }
 
 export const createMessage = (
   notify: Notification,
-  options?: { notice?: string },
+  options?: { plainText?: boolean },
 ): Promise<Message> => {
   const mail = notify.mail
   let notice = `Received: ${mail.date}`
-  if (options && options.notice) {
-    notice += '\n' + options.notice
-  }
+  notice += '\nSource: ' + createS3UrlMarkup(notify.url)
+
   notice +=
     '\n• type: ' + (notify.type || 'generic') + ', priority: ' + (notify.priority || 'generic')
   if (notify.meta) {
@@ -58,15 +98,7 @@ export const createMessage = (
     })
   }
 
-  interface SlackBlock {
-    type: 'section'
-    text: {
-      type: 'mrkdwn' | 'plain_text'
-      text: string
-    }
-  }
-
-  const dynamicBlocks = [] as SlackBlock[]
+  const dynamicBlocks: SlackBlock[] = []
 
   if (!mail.text) {
     dynamicBlocks.push({
@@ -78,7 +110,8 @@ export const createMessage = (
     })
   } else {
     // Split because of 3000 character limit for slack block content
-    mail.text.split('\n\n').map(s =>
+    // Empty plain_text blocks generate invalid_text error
+    mail.text.split('\n\n').filter(s => s.trim() !== "").map(s =>
       dynamicBlocks.push({
         type: 'section',
         text: {
@@ -99,7 +132,7 @@ export const createMessage = (
     })
   }
 
-  const blocks = [
+  const blocks: SlackBlock[] = [
     {
       type: 'section',
       text: {
@@ -130,14 +163,13 @@ export const createMessage = (
   ${mail.text}  
   `
 
-  const message = {
+  const message: Message = {
     ...notify,
     uuid: uuid(),
-    blocks,
     text,
-  } as Message
+    ...(options?.plainText ? {} : { blocks }),
+  }
 
   // console.info(JSON.stringify(blocks, null, 2))
-  message.channel = findChannel(message)
   return Promise.resolve(message)
 }

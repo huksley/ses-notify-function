@@ -6,6 +6,7 @@ import { config } from './config'
 import { S3, SES } from 'aws-sdk'
 import * as aws from 'aws-sdk'
 import { createTransport } from 'nodemailer'
+import { Response } from 'node-fetch'
 
 import { createMessage, findDestination } from './slack'
 import { parseMail, Notification } from './mime'
@@ -40,29 +41,74 @@ const send = createTransport({
   sendingRate: 1,
 })
 
-export const processNotify = (url: string) => async (notify: Notification) => {
-  const mail = {
-    from: notify.to,
-    to: notify.from,
-    subject: notify.meta?.subject?.startsWith("Re:") ? notify.meta?.subject : ('Re: ' + (notify.meta?.subject || '')),
-    html: "<div><p>Hi, I've received your message. Thank you!</p><p>On " + notify.mail.date?.toISOString() + " you wrote:\r\n" + 
-      notify.mail.html + 
-    "</p></div>",
-    headers: {
-      ...(typeof notify.meta?.messageId == 'string'
-        ? { 'In-Reply-To': notify.meta?.messageId }
-        : {}),
-    },
+export const processNotify = async (notify: Notification) => {
+  if (config.SEND_REPLY === '1') {
+    const mail = {
+      from: notify.to,
+      to: notify.from,
+      subject: notify.meta?.subject?.startsWith('Re:')
+        ? notify.meta?.subject
+        : 'Re: ' + (notify.meta?.subject || ''),
+      html:
+        "<div><p>Hi, I've received your message. Thank you!</p><p>On " +
+        notify.mail.date?.toISOString() +
+        ' you wrote:\r\n' +
+        notify.mail.html +
+        '</p></div>',
+      headers: {
+        ...(typeof notify.meta?.messageId == 'string'
+          ? { 'In-Reply-To': notify.meta?.messageId }
+          : {}),
+      },
+    }
+
+    if (config.SEND_REPLY_EXCLUDE && notify.from !== config.SEND_REPLY_EXCLUDE) {
+      logger.info('Sending reply email from', mail.from, 'to', mail.to, 'subject', mail.subject)
+      await send.sendMail(mail)
+    }
   }
 
-  if (notify.from !== "hello@valosan.com") {
-    logger.info('Sending email from', mail.from, 'to', mail.to, 'subject', mail.subject)
-    await send.sendMail(mail);
-  }
-
-  return createMessage(notify, { notice: `Source: ${createS3UrlMarkup(url)}` }).then(message => {
+  return createMessage(notify).then(message => {
     return findDestination(message).then(slackUrl => {
-      logger.info('Sending message ' + message.uuid + ' to ' + slackUrl)
+      logger.info('Sending message ' + message.url + ', UUID = ' + message.uuid + ' to ' + slackUrl)
+
+      let plainTextSent = false
+
+      const handleSlackResponse = async (response: Response) => {
+        if (response.status === 204) {
+          logger.info('Message sent ' + message.uuid + ': 204 OK')
+          return true
+        } else if (response.status === 200) {
+          return response.text().then(text => {
+            logger.info('Message sent (' + message.uuid + '): ' + text)
+            return true
+          })
+        } else {
+          return response.text().then(text => {
+            const code = text
+            if (!plainTextSent && code === 'invalid_blocks') {
+              // Resend with plain text
+              plainTextSent = true
+              logger.info('Resending message ' + message.uuid + ' as plain text, got invalid_blocks', JSON.stringify(message.blocks))
+              return fetch(slackUrl, {
+                method: 'post',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  text: message.text,
+                }),
+              }).then(handleSlackResponse)
+            } else {
+              logger.info(
+                'Message sending failed (' + message.uuid + '): ' + response.status + ', ' + text,
+              )
+              return false
+            }
+          })
+        }
+      }
+
       return fetch(slackUrl, {
         method: 'post',
         headers: {
@@ -73,24 +119,7 @@ export const processNotify = (url: string) => async (notify: Notification) => {
           text: message.text,
         }),
       })
-        .then(response => {
-          if (response.status === 204) {
-            logger.info('Message sent ' + message.uuid + ': 204 OK')
-            return true
-          } else if (response.status === 200) {
-            return response.text().then(text => {
-              logger.info('Message sent (' + message.uuid + '): ' + text)
-              return true
-            })
-          } else {
-            return response.text().then(text => {
-              logger.info(
-                'Message sending failed (' + message.uuid + '): ' + response.status + ', ' + text,
-              )
-              return false
-            })
-          }
-        })
+        .then(handleSlackResponse)
         .catch(err => {
           logger.warn('Failed to send message (' + message.uuid + '): ' + err.message, err)
           return false
@@ -100,40 +129,23 @@ export const processNotify = (url: string) => async (notify: Notification) => {
 }
 
 export const processMailObject = (url: string) => {
-  logger.info('Sending ' + url + ' to ' + config.SLACK_DEFAULT_HOOK_URL)
-
-  // Update content-type to be text
+  logger.info('Processing ' + url)
   return s3
-    .copyObject({
-      CopySource: urlToBucketName(url) + '/' + urlToKeyName(url),
-      Bucket: urlToBucketName(url),
-      Key: urlToKeyName(url),
-      ContentType: 'text/plain',
-      MetadataDirective: 'REPLACE',
-    })
+    .getObject({ Bucket: urlToBucketName(url), Key: urlToKeyName(url) })
     .promise()
-    .then(_ => {
-      return s3
-        .getObject({ Bucket: urlToBucketName(url), Key: urlToKeyName(url) })
-        .promise()
-        .then(data => {
-          logger.info(`Got object ${url}, ${data.ContentLength} bytes`)
-          // force cast from undefined and Uint8Array
-          return parseMail(data.Body as any)
-            .then(processNotify(url))
-            .catch(err => {
-              logger.warn(`Failed to parse mail object: ${url}`, err)
-              throw toThrow(err, `Failed to parse mail object: ${url}`)
-            })
-        })
+    .then(data => {
+      logger.info(`Got object ${url}, ${data.ContentLength} bytes`)
+      // force cast from undefined and Uint8Array
+      return parseMail(url, data.Body as any)
+        .then(processNotify)
         .catch(err => {
-          logger.warn(`Failed to get object: ${url}`, err)
-          throw toThrow(err, `Failed to get object: ${url}`)
+          logger.warn(`Failed to parse mail object: ${url}`, err)
+          throw toThrow(err, `Failed to parse mail object: ${url}`)
         })
     })
     .catch(err => {
-      logger.warn(`Failed to update object meta: ${url}`, err)
-      throw toThrow(err, `Failed to update object meta: ${url}`)
+      logger.warn(`Failed to get object: ${url}`, err)
+      throw toThrow(err, `Failed to get object: ${url}`)
     })
 }
 

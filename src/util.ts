@@ -1,9 +1,6 @@
 import * as assert from 'assert'
 import { logger as log } from './logger'
-import * as t from 'io-ts'
-import { PathReporter } from 'io-ts/lib/PathReporter'
 import { URL } from 'url'
-import * as R from 'ramda'
 import { Context as LambdaContext, APIGatewayEvent, Callback as LambdaCallback } from 'aws-lambda'
 
 export const urlToBucketName = (s3Url: string): string => {
@@ -39,26 +36,6 @@ export const urlToKeyName = (s3Url: string): string => {
 export const passert = <T>(value: any | undefined | null, result: T | null | undefined): T => {
   assert.ok(value)
   return result as NonNullable<T>
-}
-
-/** Log something and pass something */
-export const plog = <T>(msg: string, meta: any | undefined, result: T): T => {
-  log.info(msg, JSON.stringify(meta))
-  return result
-}
-
-/** Decode or throw exception */
-export const decode = <T>(
-  type: t.TypeC<any> | t.IntersectionC<any> | t.PartialC<any>,
-  json: string | undefined | null | any,
-) => {
-  assert.ok(json, 'Incoming JSON is either a string or an object: ' + json)
-  const res = type.decode(typeof json === 'string' ? JSON.parse(json!) : json)
-  const value = res.getOrElseL(_ => {
-    throw new Error('Invalid value ' + JSON.stringify(PathReporter.report(res)))
-  })
-  // Filter undefined
-  return R.pick(R.filter(k => value[k] !== undefined, R.keys(value)) as string[], value) as T
 }
 
 export const toThrow = (err: any, msg?: string) =>

@@ -1,8 +1,11 @@
 import { simpleParser, ParsedMail } from 'mailparser'
+import { logger } from './logger';
 
 export type NotificationType = 'github' | 'linkedin' | undefined
 
 export interface Notification {
+  /** Bucket url */
+  url: string;
   from?: string
   to?: string
   type: NotificationType
@@ -23,7 +26,8 @@ export const notificationType = (mail: ParsedMail): NotificationType => {
   return undefined
 }
 
-export const toGithubNotification = (mail: ParsedMail): Notification => ({
+export const toGithubNotification = (url: string, mail: ParsedMail): Notification => ({
+  url,
   type: 'github',
   from: mail.from?.value[0].address,
   to: mail.cc ? mail.cc?.value[0].address : mail.to?.value[0].address,
@@ -39,7 +43,8 @@ export const toGithubNotification = (mail: ParsedMail): Notification => ({
   },
 })
 
-export const toLinkedInNotification = (mail: ParsedMail): Notification => ({
+export const toLinkedInNotification = (url: string, mail: ParsedMail): Notification => ({
+  url, 
   type: 'linkedin',
   from: mail.from?.value[0].address,
   to: mail.to?.value[0].address,
@@ -55,7 +60,8 @@ export const toLinkedInNotification = (mail: ParsedMail): Notification => ({
   },
 })
 
-export const toGenericNotification = (mail: ParsedMail): Notification => ({
+export const toGenericNotification = (url: string, mail: ParsedMail): Notification => ({
+  url,
   type: undefined,
   from: mail.from?.value[0].address,
   to: mail.to?.value[0].address,
@@ -67,16 +73,18 @@ export const toGenericNotification = (mail: ParsedMail): Notification => ({
   },
 })
 
-export const toNotification = (mail: ParsedMail): Notification => {
-  switch (notificationType(mail)) {
+export const toNotification = (url: string) => (mail: ParsedMail): Notification => {
+  const type = notificationType(mail)
+  logger.info("toNotification", url, "type", type)
+  switch (type) {
     case 'github':
-      return toGithubNotification(mail)
+      return toGithubNotification(url, mail)
     case 'linkedin':
-      return toLinkedInNotification(mail)
+      return toLinkedInNotification(url, mail)
     default:
-      return toGenericNotification(mail)
+      return toGenericNotification(url, mail)
   }
 }
 
-export const parseMail = (body: Buffer): Promise<Notification> =>
-  simpleParser(body, {}).then(toNotification)
+export const parseMail = (url: string, body: Buffer): Promise<Notification> =>
+  simpleParser(body, {}).then(toNotification(url))
