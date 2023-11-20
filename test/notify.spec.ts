@@ -59,7 +59,7 @@ describe('notify.ts', () => {
         assert.equal('github', notify.type)
         return createMessage(notify).then(m => {
           let meta = ''
-          m.blocks.forEach(e => {
+          m.blocks?.forEach(e => {
             if (e.type === 'context' && e.elements) {
               logger.info(e)
               e.elements.forEach(ee => {
@@ -118,14 +118,14 @@ describe('notify.ts', () => {
   e2e('can process local sample file uptime robot', function() {
     this.timeout(20000)
     return parseMail(FAKE_URL, fs.readFileSync('test-data/5cktoahvk970k205fsrj3h7i17kbhl7bvmcgido1'))
-      .then(processNotify('s3://sample-bucket/sample-key'))
+      .then(processNotify)
       .then(result => assert(result))
   })
 
   e2e('no invalid_blocks response from slack', function() {
     this.timeout(20000)
     return parseMail(FAKE_URL, fs.readFileSync('test-data/lp7i8nenl6m9m6crjlbnnegghhmjptppuctqn581'))
-      .then(processNotify('s3://sample-bucket/sample-key'))
+      .then(processNotify)
       .then(result => assert(result))
   })
 })

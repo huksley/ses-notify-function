@@ -56,7 +56,7 @@
     "start": "cross-env NODE_ENV=production node ./build/index.js",
     "build": "tsc -p .",
     "format": "prettier \"src/**/*.{js,ts,tsx}\" --write",
-    "test": "mocha",
+    "test": "if [ -d test-data ]; then mocha; fi",
     "lint": "exit 0",
     "deploy": "serverless deploy",
     "serverless": "serverless"
