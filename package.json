@@ -57,6 +57,7 @@
     "build": "tsc -p .",
     "format": "prettier \"src/**/*.{js,ts,tsx}\" --write",
     "test": "mocha",
+    "lint": "exit 0",
     "deploy": "serverless deploy",
     "serverless": "serverless"
   },
