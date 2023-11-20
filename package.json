@@ -47,7 +47,6 @@
     "serverless-plugin-typescript": "^2.1.5",
     "shx": "^0.3.2",
     "ts-node": "^8.3.0",
-    "tslint": "^5.16.0",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^5.2.2"
   },
@@ -57,11 +56,9 @@
     "start": "cross-env NODE_ENV=production node ./build/index.js",
     "build": "tsc -p .",
     "format": "prettier \"src/**/*.{js,ts,tsx}\" --write",
-    "lint": "ts-node node_modules/.bin/tslint -p . -t verbose",
-    "test": "chamber exec ses-notify -- mocha",
-    "deploy": "chamber exec ses-notify -- serverless deploy && chamber exec ses-notify -- serverless s3deploy",
-    "serverless": "chamber exec ses-notify -- serverless",
-    "chamber": "chamber exec ses-notify --pristine -- sh -c set"
+    "test": "mocha",
+    "deploy": "serverless deploy",
+    "serverless": "serverless"
   },
   "prettier": {
     "semi": false,
